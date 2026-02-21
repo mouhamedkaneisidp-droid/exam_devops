@@ -12,13 +12,16 @@ env:
 
 jobs:
 
+  # ================================
+  # JOB 1 : Build & Push
+  # ================================
   build:
     name: Build & Push Docker Image
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
 
       - name: Login to Docker Hub
         uses: docker/login-action@v3
@@ -34,6 +37,9 @@ jobs:
         run: |
           docker push ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
 
+  # ================================
+  # JOB 2 : Scan de sécurité Trivy
+  # ================================
   scan:
     name: Scan Vulnerabilities
     runs-on: ubuntu-latest
@@ -50,6 +56,9 @@ jobs:
           vuln-type: os,library
           ignore-unfixed: true
 
+  # ================================
+  # JOB 3 : Deploy sur self-hosted
+  # ================================
   deploy:
     name: Deploy to Server
     runs-on: self-hosted
@@ -57,7 +66,8 @@ jobs:
 
     steps:
       - name: Login to Docker Hub
-        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+        run: |
+          echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
       - name: Pull Docker image
         run: |
