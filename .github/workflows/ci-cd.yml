@@ -12,38 +12,28 @@ env:
 
 jobs:
 
-  # ─────────────────────────────────────────
-  # PARTIE 1 : CI - Build & Push
-  # ─────────────────────────────────────────
   build:
     name: Build & Push Docker Image
     runs-on: ubuntu-latest
 
     steps:
-      # Étape 1 : Récupérer le code source
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      # Étape 2 : Se connecter à Docker Hub
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      # Étape 3 : Builder l'image Docker
       - name: Build Docker image
         run: |
-          docker buildx build -t ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} .
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} .
 
-      # Étape 4 : Pusher l'image vers Docker Hub
       - name: Push Docker image
         run: |
           docker push ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
 
-  # ─────────────────────────────────────────
-  # PARTIE 2 : Scan de sécurité avec Trivy
-  # ─────────────────────────────────────────
   scan:
     name: Scan Vulnerabilities
     runs-on: ubuntu-latest
@@ -60,35 +50,27 @@ jobs:
           vuln-type: os,library
           ignore-unfixed: true
 
-  # ─────────────────────────────────────────
-  # PARTIE 3 : CD - Déploiement self-hosted
-  # ─────────────────────────────────────────
   deploy:
     name: Deploy to Server
     runs-on: self-hosted
     needs: scan
 
     steps:
-      # Étape 1 : Se connecter à Docker Hub
       - name: Login to Docker Hub
         run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
-      # Étape 2 : Pull la dernière image
       - name: Pull Docker image
         run: |
           docker pull ${{ secrets.DOCKER_USERNAME }}/ci-html-demo:latest
 
-      # Étape 3 : Stopper le conteneur existant (si présent)
       - name: Stop existing container
         run: |
           docker stop ci-html-demo || true
 
-      # Étape 4 : Supprimer l'ancien conteneur
       - name: Remove old container
         run: |
           docker rm ci-html-demo || true
 
-      # Étape 5 : Lancer le nouveau conteneur sur le port 80
       - name: Run new container
         run: |
           docker run -d \
